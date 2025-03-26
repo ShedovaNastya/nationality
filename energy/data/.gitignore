@@ -1,5 +1,0 @@
-test-clean/*
-test-clean-alignments/*
-eval_dataset.csv
-phoneme_energy-27000.csv
-phoneme_energy.csv
