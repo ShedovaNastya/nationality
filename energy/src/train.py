@@ -1,73 +1,47 @@
 import argparse
+import torchaudio
 import wandb
+import os
 import pandas as pd
-import parselmouth
-import librosa
 import torch
-
-from transformers import T5Tokenizer, Trainer, TrainingArguments
+import numpy as np
+import matplotlib.pyplot as plt
+import wespeaker
 from torch.utils.data import Dataset
 from torch import nn
-from torch.nn.utils.rnn import pad_sequence
-from transformers import T5ForConditionalGeneration
+from transformers import Trainer, TrainingArguments, T5EncoderModel
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error, r2_score
 
 
-class CustomSpeechDataCollator:
-    def __init__(self, tokenizer, padding=True, max_length=None):
-        self.tokenizer = tokenizer
-        self.padding = padding
-        self.max_length = max_length
-
+class CustomDataCollator:
     def __call__(self, features):
-        max_seq_len = max(f["speech_embeddings"].shape[0] for f in features)
-
-        speech_embeddings = [
-            torch.nn.functional.pad(f["speech_embeddings"], (0, 0, 0, max_seq_len - f["speech_embeddings"].shape[0]))
-            for f in features
-        ]
-        speech_embeddings = torch.stack(speech_embeddings)
-
-        labels = [torch.tensor(f["labels"], dtype=torch.long) for f in features]
-        padded_labels = pad_sequence(labels, batch_first=True, padding_value=-100)
-
-        batch = {
+        speech_embeddings = torch.stack([f["speech_embeddings"] for f in features])
+        energies = torch.tensor([f["energy"] for f in features], dtype=torch.float32)
+        labels = [f["labels"] for f in features]
+        return {
             "speech_embeddings": speech_embeddings,
-            "labels": padded_labels,
+            "energy": energies,
+            "labels": labels
         }
-        return batch
 
 
-class SpeechDataset(Dataset):
-    def __init__(
-            self,
-            csv_path,
-            tokenizer,
-            sample_rate=16000,
-            n_mfcc=13,
-    ):
+class PhonemeDataset(Dataset):
+    def __init__(self, csv_path, pretrain_dir, sample_rate=16000):
         self.data = pd.read_csv(csv_path)
-        self.tokenizer = tokenizer
+        self.phoneme_dict = {phoneme: idx for idx, phoneme in enumerate(sorted(set(self.data['phoneme'])))}
         self.sample_rate = sample_rate
-        self.n_mfcc = n_mfcc
+        self.model = wespeaker.load_model_local(pretrain_dir)
+        self.model.set_device("mps" if torch.backends.mps.is_available() else "cpu")
 
-    def extract_features(self, wav_path, start_time, end_time, max_frames=30):
-        y, sr = librosa.load(wav_path, sr=self.sample_rate)
-        start_sample = int(start_time * sr)
-        end_sample = int(end_time * sr)
-        segment = y[start_sample:end_sample]
-
-        snd = parselmouth.Sound(segment, sampling_frequency=sr)
-        mfcc = snd.to_mfcc(number_of_coefficients=self.n_mfcc).to_array()
-
-        mfcc = torch.tensor(mfcc, dtype=torch.float32)
-
-        if mfcc.shape[1] > max_frames:
-            mfcc = mfcc[:, :max_frames]
-        if mfcc.shape[1] < max_frames:
-            pad = torch.zeros(mfcc.shape[0], max_frames - mfcc.shape[1])
-            mfcc = torch.cat((mfcc, pad), dim=1)
-
-        return mfcc
+    def extract_features(self, wav_path, start_time, end_time):
+        pcm, sr = torchaudio.load(
+            uri=wav_path,
+            frame_offset=int(start_time * self.sample_rate),
+            num_frames=int((end_time - start_time) * self.sample_rate),
+        )
+        embeddings = self.model.extract_embedding_from_pcm(pcm, sr)
+        return embeddings
 
     def __len__(self):
         return len(self.data)
@@ -75,59 +49,130 @@ class SpeechDataset(Dataset):
     def __getitem__(self, idx):
         row = self.data.iloc[idx]
         phoneme = row['phoneme']
+        energy = row['energy']
         wav_path = row['wav_path']
         start_time = row['start_time']
         end_time = row['end_time']
-
-        features = self.extract_features(wav_path, start_time, end_time)
-        phoneme_ids = self.tokenizer.encode(phoneme)
-        result = {
-            "labels": torch.tensor(phoneme_ids, dtype=torch.long),
-            "speech_embeddings": features,
+        embeddings = self.extract_features(wav_path, start_time, end_time)
+        return {
+            "labels": torch.tensor(self.phoneme_dict[phoneme], dtype=torch.long),
+            "speech_embeddings": torch.tensor(embeddings, dtype=torch.float32),
+            "energy": torch.tensor(energy, dtype=torch.float32)
         }
-        # print(f"__getitem__[{idx}] ->", result)  # Debug print
-        return result
 
 
-class SpeechEncoder(nn.Module):
-    def __init__(self, input_dim=14, hidden_dim=768):
-        super(SpeechEncoder, self).__init__()
-        self.linear = nn.Linear(input_dim, hidden_dim)
-        self.activation = nn.ReLU()
+class PhonemeRegressor(nn.Module):
+    def __init__(
+            self,
+            t5_model_name='t5-small',
+            embedding_dim=256,
+            hidden_dim=512,
+            output_dim=1,
+            dropout_prob=0.3,
+    ):
+        super(PhonemeRegressor, self).__init__()
+        self.encoder = T5EncoderModel.from_pretrained(t5_model_name)
+        self.speech_encoder = nn.Linear(embedding_dim + 1, self.encoder.config.d_model)  # +1 для энергии
 
-    def forward(self, x):
-        x = self.linear(x.transpose(1, 2))
-        x = self.activation(x)
-        return x
-
-
-class Speech2TextModel(nn.Module):
-    def __init__(self, t5_model_name="t5-base"):
-        super(Speech2TextModel, self).__init__()
-
-        # input dim = 13 MFCC
-        self.speech_encoder = SpeechEncoder(input_dim=14, hidden_dim=768)
-        self.t5 = T5ForConditionalGeneration.from_pretrained(t5_model_name)
-
-    def forward(self, speech_embeddings, labels=None):
-        encoder_embeds = self.speech_encoder(speech_embeddings)
-
-        print(f"embeds shape: {encoder_embeds.shape}\n")
-
-        attention_mask = torch.ones(encoder_embeds.shape[:2], dtype=torch.long, device=encoder_embeds.device)
-        print(f"Attention mask shape: {attention_mask.shape}")
-
-        encoder_outputs = self.t5.encoder(
-            inputs_embeds=encoder_embeds,
-            attention_mask=attention_mask,
-            return_dict=True
+        self.fc = nn.Sequential(
+            nn.Linear(self.encoder.config.d_model, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob),
+            nn.Linear(hidden_dim, output_dim)
         )
 
-        outputs = self.t5(
-            encoder_outputs=encoder_outputs,
-            labels=labels
-        )
-        return outputs
+    def forward(self, energy, speech_embeddings, labels=None):
+        energy = energy.unsqueeze(1)
+        # print(f"energy shape {energy.shape}")
+        # print(f"speech_embedding shape {speech_embeddings.shape}")
+        combined_input = torch.cat((speech_embeddings, energy), dim=1)  # Объединяем эмбеддинги и энергию
+        speech_embeddings = self.speech_encoder(combined_input)  # Приводим к размерности T5
+
+        if len(speech_embeddings.shape) == 2:  # Проверяем, что размерность только (batch_size, embedding_dim)
+            speech_embeddings = speech_embeddings.unsqueeze(1)  # Добавляем размерность для seq_length
+
+        encoded = self.encoder(inputs_embeds=speech_embeddings).last_hidden_state[:, 0, :]
+        output = self.fc(encoded)
+        return output
+
+
+def extract_embeddings_and_labels(model, dataloader, device):
+    model.eval()
+    embeddings = []
+    labels = []
+
+    with torch.no_grad():
+        for batch in dataloader:
+            speech_embeddings = batch['speech_embeddings'].to(device)
+            energy = torch.tensor(batch['energy'], dtype=torch.float32).to(device)
+            label = batch['labels'].to(device)
+
+            print(f"Speech embeddings shape: {speech_embeddings.shape}")
+            print(f"Energy shape: {energy.shape}")
+
+            output = model(energy, speech_embeddings)
+            embeddings.append(output.cpu().numpy())
+            labels.append(label.cpu().numpy())
+
+    embeddings = np.concatenate(embeddings, axis=0)
+    labels = np.concatenate(labels, axis=0)
+    return embeddings, labels
+
+
+history = {
+    "rmse": [],
+    "mae": [],
+    "r2": [],
+}
+
+
+def compute_metrics(eval_pred):
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    predictions, labels = eval_pred
+
+    # Приводим к torch.Tensor и переносим на device
+    predictions = torch.tensor(predictions, dtype=torch.float32).flatten().to(device)
+    labels = torch.tensor(np.array(labels), dtype=torch.long).flatten().to(device)
+
+    if len(labels) != len(predictions):
+        print(f"Размеры labels: {len(labels)}, predictions: {len(predictions)}")
+        min_len = min(len(labels), len(predictions))
+        labels = labels[:min_len]
+        predictions = predictions[:min_len]
+
+    # Вычисляем метрики
+    rmse = np.sqrt(mean_squared_error(labels.cpu().numpy(), predictions.cpu().numpy()))
+    mae = mean_absolute_error(labels.cpu().numpy(), predictions.cpu().numpy())
+    r2 = r2_score(labels.cpu().numpy(), predictions.cpu().numpy())
+
+    history["rmse"].append(rmse)
+    history["mae"].append(mae)
+    history["r2"].append(r2)
+
+    return {
+        "rmse": torch.tensor(rmse, dtype=torch.float32).to(device),
+        "mae": torch.tensor(mae, dtype=torch.float32).to(device),
+        "r2": torch.tensor(r2, dtype=torch.float32).to(device)
+    }
+
+
+def save_metrics_plots(history, output_dir='../data/result/'):
+    os.makedirs(output_dir, exist_ok=True)
+
+    for metric_name, values in history.items():
+        plt.figure()
+        plt.plot(values)
+        plt.title(f'{metric_name} over epochs')
+        plt.xlabel('Epochs')
+        plt.ylabel(metric_name)
+        plt.grid(True)
+
+        file_path = os.path.join(output_dir, f"{metric_name}.png")
+        plt.savefig(file_path)
+        plt.close()
 
 
 def main():
@@ -150,6 +195,20 @@ def main():
     )
 
     parser.add_argument(
+        '--wandb_token',
+        type=str,
+        help='Wandb token',
+        required=True,
+    )
+
+    parser.add_argument(
+        '--pretrain_dir',
+        type=str,
+        help='Pretrain dir',
+        required=True,
+    )
+
+    parser.add_argument(
         '--model_name',
         type=str,
         help='Name of model',
@@ -158,27 +217,41 @@ def main():
     )
 
     parser.add_argument(
-        '--wandb_token',
+        '--tsne_plot_path',
         type=str,
-        help='Wandb token',
-        required=True,
+        help='Path to save tsne_plot figure',
     )
 
+    parser.add_argument(
+        '--sample-rate',
+        type=int,
+        help='Sample rate',
+        default=16000,
+    )
+
+    device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 
     args = parser.parse_args()
 
     wandb.login(key=args.wandb_token)
     wandb.init(project="inrerp", name="t5_text_extraction")
 
-    tokenizer = T5Tokenizer.from_pretrained(args.model_name)
+    train_dataset = PhonemeDataset(
+        csv_path=args.csv_path,
+        sample_rate=args.sample_rate,
+        pretrain_dir=args.pretrain_dir,
+    )
 
-    train_dataset = SpeechDataset(args.csv_path, tokenizer)
+    val_dataset = PhonemeDataset(
+        csv_path=args.csv_val_path,
+        sample_rate=args.sample_rate,
+        pretrain_dir=args.pretrain_dir,
+    )
 
-    val_dataset = SpeechDataset(args.csv_val_path, tokenizer)
+    model = PhonemeRegressor(t5_model_name=args.model_name)
+    model.to(device)
 
-    model = Speech2TextModel(t5_model_name=args.model_name)
-
-    data_collator = CustomSpeechDataCollator(tokenizer, max_length=128)
+    data_collator = CustomDataCollator()
 
     training_args = TrainingArguments(
         output_dir="speech2text_en_model",
@@ -202,11 +275,13 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         data_collator=data_collator,
-        tokenizer=tokenizer,
+        compute_metrics=compute_metrics,
     )
 
     trainer.args.save_safetensors = False
     trainer.train()
+
+    save_metrics_plots(history)
 
 
 if __name__ == '__main__':
