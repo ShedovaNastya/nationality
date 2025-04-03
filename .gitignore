@@ -170,6 +170,15 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+
+
+energy/data/test-clean/
+energy/data/test-clean-alignments/
+energy/data/*.csv
+energy/models/voxblink2_samresnet34/
+energy/src/speech2text_en_model/
+energy/src/wandb/
+
 /dataset/
 /pretrain_dir/
 /results/
@@ -178,3 +187,4 @@ dataset/
 dataset_split/
 embeddings/
 model_weights/
+
