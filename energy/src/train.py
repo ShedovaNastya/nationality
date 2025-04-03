@@ -1,9 +1,7 @@
 import argparse
 import pickle
-
 import pandas as pd
 import wandb
-import os
 import torch
 import matplotlib.pyplot as plt
 from torch import nn
@@ -72,6 +70,8 @@ class PhonemeRegressor(nn.Module):
         self.encoder = T5EncoderModel.from_pretrained(t5_model_name)
         self.speech_encoder = nn.Linear(embedding_dim + 1, self.encoder.config.d_model)  # +1 для энергии
 
+        self.batch_norm = nn.BatchNorm1d(self.encoder.config.d_model)
+
         self.fc = nn.Sequential(
             nn.Linear(self.encoder.config.d_model, hidden_dim),
             nn.ReLU(),
@@ -87,10 +87,11 @@ class PhonemeRegressor(nn.Module):
         combined_input = torch.cat((speech_embeddings, energy), dim=1)  # Объединяем эмбеддинги и энергию
         speech_embeddings = self.speech_encoder(combined_input)  # Приводим к размерности T5
 
-        if len(speech_embeddings.shape) == 2:  # Проверяем, что размерность только (batch_size, embedding_dim)
+        if len(speech_embeddings.shape) == 2:
             speech_embeddings = speech_embeddings.unsqueeze(1)  # Добавляем размерность для seq_length
 
         encoded = self.encoder(inputs_embeds=speech_embeddings).last_hidden_state[:, 0, :]
+        encoded = self.batch_norm(encoded)  # Применяем Batch Normalization
         output = self.fc(encoded)
         return output
 
@@ -103,7 +104,6 @@ def main():
         type=str,
         help='Path to csv dataset',
         required=True,
-        default='../data/phoneme_energy-27000.csv',
     )
 
     parser.add_argument(
@@ -111,7 +111,6 @@ def main():
         type=str,
         help='Path to csv validation dataset',
         required=True,
-        default='../data/eval_dataset.csv'
     )
 
     parser.add_argument(
@@ -182,9 +181,10 @@ def main():
     model = PhonemeRegressor(t5_model_name=args.model_name)
     model.to(device)
 
-    criterion = nn.MSELoss(reduction='mean')
+    criterion = nn.HuberLoss(delta=1.0)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-2, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
 
     train_metrics = {
         "loss": [],
@@ -220,6 +220,7 @@ def main():
             outputs = model(energy, embeddings).squeeze(1)
             loss = criterion(outputs, targets)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Ограничиваем градиенты
             optimizer.step()
             train_loss += loss.item()
 
@@ -250,6 +251,7 @@ def main():
                 eval_true_labels.extend(targets.detach().cpu().numpy())
 
         eval_loss /= len(eval_loader)
+        scheduler.step(eval_loss)  # Адаптивное уменьшение LR
 
         train_losses.append(train_loss)
         eval_losses.append(eval_loss)
