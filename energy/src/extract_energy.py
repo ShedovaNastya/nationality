@@ -1,10 +1,13 @@
 import os
 from pathlib import Path
+from uuid import uuid4
+
 import pandas as pd
 import numpy as np
 import parselmouth
 
 import textgrid
+from tqdm import tqdm
 
 
 def extract_phoneme_energy(textgrid_path, wav_path):
@@ -38,7 +41,7 @@ def extract_phoneme_energy(textgrid_path, wav_path):
         intensity = segment.to_intensity(time_step=0.01)
         energy = np.mean(intensity.values)
 
-        data.append([phoneme, energy, wav_path, start, end])
+        data.append([uuid4(), phoneme, energy, wav_path, start, end])
 
     return data
 
@@ -59,9 +62,9 @@ def get_audio_paths(audio_dir):
 def process_dataset(textgrid_dir, wav_dir, output_csv):
     results = []
 
-    for filename in os.listdir(textgrid_dir):
+    for filename in tqdm(os.listdir(textgrid_dir), desc="listdirs"):
         files = get_audio_paths(os.path.join(textgrid_dir, filename))
-        for file in files:
+        for file in tqdm(files, desc="fileprocessing"):
             if file.__str__().endswith(".TextGrid"):
                 wav_filename = os.readlink(file.__str__().replace(".TextGrid", ".wav"))
                 wav_path = wav_filename
@@ -72,7 +75,7 @@ def process_dataset(textgrid_dir, wav_dir, output_csv):
                     print(f"no wav files found in {wav_filename}")
                     break
 
-    df = pd.DataFrame(results, columns=["phoneme", "energy", "wav_path", "start_time", "end_time"])
+    df = pd.DataFrame(results, columns=["id", "phoneme", "energy", "wav_path", "start_time", "end_time"])
     df.to_csv(output_csv, index=False)
     print(f"file saved: {output_csv}")
 
@@ -80,7 +83,6 @@ def process_dataset(textgrid_dir, wav_dir, output_csv):
 if __name__ == "__main__":
     TEXTGRID_DIR = "../data/test-clean-alignments"
     WAV_DIR = "../data/test-clean"
-    OUTPUT_CSV = "../data/phoneme_energy.csv"
+    OUTPUT_CSV = "../data/phoneme_energy_v2.csv"
 
     process_dataset(TEXTGRID_DIR, WAV_DIR, OUTPUT_CSV)
-

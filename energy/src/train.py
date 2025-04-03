@@ -1,17 +1,16 @@
 import argparse
-import torchaudio
+import pickle
+
+import pandas as pd
 import wandb
 import os
-import pandas as pd
 import torch
-import numpy as np
 import matplotlib.pyplot as plt
-import wespeaker
-from torch.utils.data import Dataset
 from torch import nn
-from transformers import Trainer, TrainingArguments, T5EncoderModel
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import mean_absolute_error, r2_score
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+from transformers import T5EncoderModel
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error, r2_score
 
 
 class CustomDataCollator:
@@ -27,21 +26,19 @@ class CustomDataCollator:
 
 
 class PhonemeDataset(Dataset):
-    def __init__(self, csv_path, pretrain_dir, sample_rate=16000):
+    def __init__(
+            self,
+            csv_path,
+            pickle_path,
+            is_train=True,
+    ):
         self.data = pd.read_csv(csv_path)
         self.phoneme_dict = {phoneme: idx for idx, phoneme in enumerate(sorted(set(self.data['phoneme'])))}
-        self.sample_rate = sample_rate
-        self.model = wespeaker.load_model_local(pretrain_dir)
-        self.model.set_device("mps" if torch.backends.mps.is_available() else "cpu")
 
-    def extract_features(self, wav_path, start_time, end_time):
-        pcm, sr = torchaudio.load(
-            uri=wav_path,
-            frame_offset=int(start_time * self.sample_rate),
-            num_frames=int((end_time - start_time) * self.sample_rate),
-        )
-        embeddings = self.model.extract_embedding_from_pcm(pcm, sr)
-        return embeddings
+        with open(pickle_path, "rb") as f:
+            collection = "train" if is_train else "eval"
+            self.data_dict = pickle.load(f)[collection]
+            print(f"path: {csv_path} collection: {collection}; head: {list(self.data_dict.keys())[:10]}")
 
     def __len__(self):
         return len(self.data)
@@ -49,15 +46,16 @@ class PhonemeDataset(Dataset):
     def __getitem__(self, idx):
         row = self.data.iloc[idx]
         phoneme = row['phoneme']
-        energy = row['energy']
-        wav_path = row['wav_path']
-        start_time = row['start_time']
-        end_time = row['end_time']
-        embeddings = self.extract_features(wav_path, start_time, end_time)
+        id = row['id'].__str__()
+
+        item = self.data_dict[id]
+        embeddings = item["embeddings"]
+        energy = item["energy"]
+
         return {
             "labels": torch.tensor(self.phoneme_dict[phoneme], dtype=torch.long),
             "speech_embeddings": torch.tensor(embeddings, dtype=torch.float32),
-            "energy": torch.tensor(energy, dtype=torch.float32)
+            "energy": torch.tensor(energy, dtype=torch.float32),
         }
 
 
@@ -86,8 +84,6 @@ class PhonemeRegressor(nn.Module):
 
     def forward(self, energy, speech_embeddings, labels=None):
         energy = energy.unsqueeze(1)
-        # print(f"energy shape {energy.shape}")
-        # print(f"speech_embedding shape {speech_embeddings.shape}")
         combined_input = torch.cat((speech_embeddings, energy), dim=1)  # Объединяем эмбеддинги и энергию
         speech_embeddings = self.speech_encoder(combined_input)  # Приводим к размерности T5
 
@@ -97,82 +93,6 @@ class PhonemeRegressor(nn.Module):
         encoded = self.encoder(inputs_embeds=speech_embeddings).last_hidden_state[:, 0, :]
         output = self.fc(encoded)
         return output
-
-
-def extract_embeddings_and_labels(model, dataloader, device):
-    model.eval()
-    embeddings = []
-    labels = []
-
-    with torch.no_grad():
-        for batch in dataloader:
-            speech_embeddings = batch['speech_embeddings'].to(device)
-            energy = torch.tensor(batch['energy'], dtype=torch.float32).to(device)
-            label = batch['labels'].to(device)
-
-            print(f"Speech embeddings shape: {speech_embeddings.shape}")
-            print(f"Energy shape: {energy.shape}")
-
-            output = model(energy, speech_embeddings)
-            embeddings.append(output.cpu().numpy())
-            labels.append(label.cpu().numpy())
-
-    embeddings = np.concatenate(embeddings, axis=0)
-    labels = np.concatenate(labels, axis=0)
-    return embeddings, labels
-
-
-history = {
-    "rmse": [],
-    "mae": [],
-    "r2": [],
-}
-
-
-def compute_metrics(eval_pred):
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    predictions, labels = eval_pred
-
-    # Приводим к torch.Tensor и переносим на device
-    predictions = torch.tensor(predictions, dtype=torch.float32).flatten().to(device)
-    labels = torch.tensor(np.array(labels), dtype=torch.long).flatten().to(device)
-
-    if len(labels) != len(predictions):
-        print(f"Размеры labels: {len(labels)}, predictions: {len(predictions)}")
-        min_len = min(len(labels), len(predictions))
-        labels = labels[:min_len]
-        predictions = predictions[:min_len]
-
-    # Вычисляем метрики
-    rmse = np.sqrt(mean_squared_error(labels.cpu().numpy(), predictions.cpu().numpy()))
-    mae = mean_absolute_error(labels.cpu().numpy(), predictions.cpu().numpy())
-    r2 = r2_score(labels.cpu().numpy(), predictions.cpu().numpy())
-
-    history["rmse"].append(rmse)
-    history["mae"].append(mae)
-    history["r2"].append(r2)
-
-    return {
-        "rmse": torch.tensor(rmse, dtype=torch.float32).to(device),
-        "mae": torch.tensor(mae, dtype=torch.float32).to(device),
-        "r2": torch.tensor(r2, dtype=torch.float32).to(device)
-    }
-
-
-def save_metrics_plots(history, output_dir='../data/result/'):
-    os.makedirs(output_dir, exist_ok=True)
-
-    for metric_name, values in history.items():
-        plt.figure()
-        plt.plot(values)
-        plt.title(f'{metric_name} over epochs')
-        plt.xlabel('Epochs')
-        plt.ylabel(metric_name)
-        plt.grid(True)
-
-        file_path = os.path.join(output_dir, f"{metric_name}.png")
-        plt.savefig(file_path)
-        plt.close()
 
 
 def main():
@@ -192,6 +112,13 @@ def main():
         help='Path to csv validation dataset',
         required=True,
         default='../data/eval_dataset.csv'
+    )
+
+    parser.add_argument(
+        '--pickle_path',
+        type=str,
+        help='Path to pickle file',
+        required=True,
     )
 
     parser.add_argument(
@@ -217,16 +144,17 @@ def main():
     )
 
     parser.add_argument(
-        '--tsne_plot_path',
-        type=str,
-        help='Path to save tsne_plot figure',
-    )
-
-    parser.add_argument(
         '--sample-rate',
         type=int,
         help='Sample rate',
         default=16000,
+    )
+
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        help='Batch size',
+        default=128,
     )
 
     device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
@@ -238,50 +166,150 @@ def main():
 
     train_dataset = PhonemeDataset(
         csv_path=args.csv_path,
-        sample_rate=args.sample_rate,
-        pretrain_dir=args.pretrain_dir,
+        pickle_path=args.pickle_path,
+        is_train=True,
     )
 
     val_dataset = PhonemeDataset(
         csv_path=args.csv_val_path,
-        sample_rate=args.sample_rate,
-        pretrain_dir=args.pretrain_dir,
+        pickle_path=args.pickle_path,
+        is_train=False,
     )
+
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    eval_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     model = PhonemeRegressor(t5_model_name=args.model_name)
     model.to(device)
 
-    data_collator = CustomDataCollator()
+    criterion = nn.MSELoss(reduction='mean')
 
-    training_args = TrainingArguments(
-        output_dir="speech2text_en_model",
-        num_train_epochs=10,
-        per_device_train_batch_size=64,
-        per_device_eval_batch_size=64,
-        evaluation_strategy="steps",
-        eval_steps=500,
-        save_steps=500,
-        logging_steps=100,
-        learning_rate=5e-5,
-        weight_decay=0.01,
-        save_total_limit=10,
-        remove_unused_columns=False,
-        dataloader_drop_last=True,
-    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=val_dataset,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics,
-    )
+    train_metrics = {
+        "loss": [],
+        "mae": [],
+        "rmse": [],
+        "r2": [],
+    }
 
-    trainer.args.save_safetensors = False
-    trainer.train()
+    eval_metrics = {
+        "loss": [],
+        "mae": [],
+        "rmse": [],
+        "r2": [],
+    }
 
-    save_metrics_plots(history)
+    num_epochs = 100
+    best_val_loss = float("inf")
+
+    for epoch in tqdm(range(num_epochs), "epochs"):
+        train_losses = []
+        train_predictions = []
+        train_true_labels = []
+
+        model.train()
+        train_loss = 0.0
+
+        for batch in train_loader:
+            optimizer.zero_grad()
+            embeddings = batch["speech_embeddings"].to(device)
+            energy = batch["energy"].to(device)
+            targets = batch["labels"].to(device).float()
+
+            outputs = model(energy, embeddings).squeeze(1)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+
+            train_predictions.extend(outputs.detach().cpu().numpy())
+            train_true_labels.extend(targets.detach().cpu().numpy())
+
+        train_loss /= len(train_loader)
+
+        model.eval()
+        eval_loss = 0.0
+
+        eval_losses = []
+        eval_predictions = []
+        eval_true_labels = []
+
+        with torch.no_grad():
+            for batch in eval_loader:
+                embeddings = batch["speech_embeddings"].to(device)
+                energy = batch["energy"].to(device)
+                targets = batch["labels"].to(device).float()
+
+                outputs = model(energy, embeddings).squeeze(-1)
+
+                loss = criterion(outputs, targets)
+                eval_loss += loss.item()
+
+                eval_predictions.extend(outputs.detach().cpu().numpy())
+                eval_true_labels.extend(targets.detach().cpu().numpy())
+
+        eval_loss /= len(eval_loader)
+
+        train_losses.append(train_loss)
+        eval_losses.append(eval_loss)
+
+        train_mae = mean_absolute_error(train_true_labels, train_predictions)
+        train_r2 = r2_score(train_true_labels, train_predictions)
+        train_rmse = root_mean_squared_error(train_true_labels, train_predictions, )
+
+        train_metrics["loss"].append(train_loss)
+        train_metrics["mae"].append(train_mae)
+        train_metrics["rmse"].append(train_rmse)
+        train_metrics["r2"].append(train_r2)
+
+        eval_mae = mean_absolute_error(eval_true_labels, eval_predictions)
+        eval_r2 = r2_score(eval_true_labels, eval_predictions)
+        eval_rmse = root_mean_squared_error(eval_true_labels, eval_predictions)
+
+        eval_metrics["loss"].append(eval_loss)
+        eval_metrics["mae"].append(eval_mae)
+        eval_metrics["rmse"].append(eval_rmse)
+        eval_metrics["r2"].append(eval_r2)
+
+        if eval_loss < best_val_loss:
+            best_val_loss = eval_loss
+            torch.save(model.state_dict(), "best_model.pth")
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, num_epochs + 1), train_metrics["loss"], label="Train Loss")
+    plt.plot(range(1, num_epochs + 1), eval_metrics["loss"], label="Evaluation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig("loss_plot.png")
+    plt.close()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, num_epochs + 1), train_metrics["mae"], label="Train MAE")
+    plt.plot(range(1, num_epochs + 1), eval_metrics["mae"], label="Evaluation MAE")
+    plt.xlabel("Epoch")
+    plt.ylabel("MAE")
+    plt.legend()
+    plt.savefig("mae_plot.png")
+    plt.close()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, num_epochs + 1), train_metrics["r2"], label="Train R²")
+    plt.plot(range(1, num_epochs + 1), eval_metrics["r2"], label="Evaluation R²")
+    plt.xlabel("Epoch")
+    plt.ylabel("R² Score")
+    plt.legend()
+    plt.savefig("r2_plot.png")
+    plt.close()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, num_epochs + 1), train_metrics["rmse"], label="Train RMSE")
+    plt.plot(range(1, num_epochs + 1), eval_metrics["rmse"], label="Evaluation RMSE")
+    plt.xlabel("Epoch")
+    plt.ylabel("RMSE")
+    plt.legend()
+    plt.savefig("rmse_plot.png")
 
 
 if __name__ == '__main__':
