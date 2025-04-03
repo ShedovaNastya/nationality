@@ -1,6 +1,0 @@
-data/test-clean/
-data/test-clean-alignments/
-data/*.csv
-models/voxblink2_samresnet34/
-src/speech2text_en_model/
-src/wandb/
