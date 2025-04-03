@@ -87,8 +87,8 @@ class EmbeddingsDataset(Dataset):
 class ProfClassifier(nn.Module):
     def __init__(self, input_dim=256, num_classes=2):
         super(ProfClassifier, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 32)  # Уменьшили размер скрытого слоя
-        self.dropout = nn.Dropout(0.7)  # Увеличили dropout
+        self.fc1 = nn.Linear(input_dim, 32)  
+        self.dropout = nn.Dropout(0.7) 
         self.fc2 = nn.Linear(32, num_classes)
 
     def forward(self, x):
