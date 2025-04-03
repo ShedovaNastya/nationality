@@ -9,54 +9,60 @@ import wespeaker
 
 
 def get_audio_path(audio_dir):
-
+    """
+    Recursively finds all audio files in the specified directory.
+    """
     audio_dir = Path(audio_dir)
-    audio_files = list(audio_dir.glob('**/*.wav')) 
-    print(f"Найдено {len(audio_files)} файлов в {audio_dir}")  # Добавляем отладочную печать
+    audio_files = list(audio_dir.glob('**/*.wav')) + list(
+        audio_dir.glob('**/*.mp3'))
+
     return audio_files
 
 
-def extract_embeddings(audio_files, device, pretraindir):  # Исправлено название аргумента
-    model = wespeaker.load_model_local(pretraindir)
+def extract_embeddings(audio_files, device, pretrain_dir):
+    """
+    Extracts embeddings from audio files using the WeSpeaker model
+    """
+    model = wespeaker.load_model_local(pretrain_dir)
     model.set_device(device)
 
     embeddings = []
 
     for file_path in audio_files:
-        try:
-            embedding = model.extract_embedding(file_path)
-            embedding = embedding.cpu().numpy()
-            embeddings.append({
-                'file_path': str(file_path),
-                'embedding': embedding
-            })
-        except Exception as e:
-            print(f"Error processing {file_path}: {e}")
-            continue
+        embedding = model.extract_embedding(file_path)
+
+        embedding = embedding.cpu().numpy()
+        embeddings.append({
+            'file_path': str(file_path),
+            'embedding': embedding
+        })
 
     return embeddings
 
 
 def assign_labels(embeddings):
-    folder_to_label = {
-        "cooker": "повар",
-        "programmer": "программист"
-    }
-    
+    """
+    Assigns labels to classes. In this case, by the name of the parent folder.
+    """
     for emb in embeddings:
-        class_name = Path(emb['file_path']).parent.name.lower()
-        
-        emb['label'] = folder_to_label.get(class_name, "другое")
-            
+        class_name = Path(emb['file_path']).parent.name
+        emb['label'] = class_name
 
 
 def save_to_npy(embeddings, save_dir):
+    """
+    Saves embeddings in .npy format.
+    """
     numpy_embs = np.array(embeddings)
     np.save(os.path.join(save_dir, "numpy_embs.npy"), numpy_embs)
 
+
 def save_to_chromadb(embeddings, db_path, split):
+    """
+    Stores embeddings in ChromaDB
+    """
     client = chromadb.PersistentClient(path=db_path)
-    collection = client.get_or_create_collection(name="profession_embeddings") # Исправлено имя коллекции
+    collection = client.get_or_create_collection(name="gender_embeddings")
 
     collection.add(
         ids=[f"{split}_{i}" for i in range(len(embeddings))],
@@ -70,56 +76,48 @@ def save_to_chromadb(embeddings, db_path, split):
 
 
 def main():
-     parser = argparse.ArgumentParser()
-     parser.add_argument("--train_dir", type=str, default="./profession_classificator_convert/train_audio",
-                         help="Path to train audio files.")
-     parser.add_argument("--test_dir", type=str, default="./profession_classificator_convert/test_audio",
-                         help="Path to test audio files.")
-     parser.add_argument("--pretraindir", type=str, default="./pretraindir",
-                         help="Path to wespeaker model pretrain_dir.")
-     parser.add_argument("--output", type=str, required=True,
-                          choices=["npy", "chromadb"],
-                          help="Embeddings saving format: npy or chromadb.")
-     parser.add_argument("--save_path", type=str, default="./embs",
-                         help="Save path for calculated embeddings")
-     args = parser.parse_args()
+    """
+    Main function
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train_dir", type=str, default="./train_audio",
+                        help="Path to both train male and female audio files.")
+    parser.add_argument("--test_dir", type=str, default="./test_audio",
+                        help="Path to both test male and female audio files.")
+    parser.add_argument("--pretrain_dir", type=str, default="./pretrain_dir",
+                        help="Path to wespeaker model pretrain_dir.")
+    parser.add_argument("--output", type=str, required=True,
+                        choices=["npy", "chromadb"],
+                        help="Embeddings saving format: npy or chromadb.")
+    parser.add_argument("--save_path", type=str, default="./embeddings",
+                        help="Save path for calculated embeddings")
+    args = parser.parse_args()
 
-     if not os.path.exists(args.train_dir):
-         raise FileNotFoundError(f"Folder {args.train_dir} does not exists.")
-     if not os.path.exists(args.test_dir):
-         raise FileNotFoundError(f"Folder {args.test_dir} does not exists.")
+    if not os.path.exists(args.train_dir):
+        raise FileNotFoundError(f"Folder {args.train_dir} does not exists.")
+    if not os.path.exists(args.test_dir):
+        raise FileNotFoundError(f"Folder {args.test_dir} does not exists.")
 
-     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-     train_audio_files = get_audio_path(args.train_dir)
-     test_audio_files = get_audio_path(args.test_dir)
+    train_audio_files = get_audio_path(args.train_dir)
+    test_audio_files = get_audio_path(args.test_dir)
 
-     # 1. Разделяем данные на train и test (если их нет в разных папках)
-     all_audio_files = train_audio_files + test_audio_files
-     np.random.shuffle(all_audio_files)
-     train_size = int(0.8 * len(all_audio_files))  # Например, 80% для обучения
-     train_files = all_audio_files[:train_size]
-     test_files = all_audio_files[train_size:]
+    train_embeddings = extract_embeddings(train_audio_files, device,
+                                          args.pretrain_dir)
+    test_embeddings = extract_embeddings(test_audio_files, device,
+                                         args.pretrain_dir)
 
-     train_embeddings = extract_embeddings(train_files, device, args.pretraindir)
-     test_embeddings = extract_embeddings(test_files, device, args.pretraindir)
+    assign_labels(train_embeddings)
+    assign_labels(test_embeddings)
 
-     assign_labels(train_embeddings)
-     assign_labels(test_embeddings)
-
-     # Add 'split' key to each embedding
-     for emb in train_embeddings:
-         emb['split'] = 'train'
-     for emb in test_embeddings:
-         emb['split'] = 'test'
-
-     if args.output == "npy":
-         os.makedirs(args.save_path, exist_ok=True)
-         save_to_npy(train_embeddings + test_embeddings, args.save_path)
-        # save_to_npy(test_embeddings, args.save_path) # save all to one npy
-     elif args.output == "chromadb":
-         save_to_chromadb(train_embeddings, args.save_path, split="train")
-         save_to_chromadb(test_embeddings, args.save_path, split="test")
+    if args.output == "npy":
+        os.makedirs(args.save_path, exist_ok=True)
+        embeddings = [{"train": train_embeddings, "test": test_embeddings}]
+        save_to_npy(embeddings, args.save_path)
+    elif args.output == "chromadb":
+        save_to_chromadb(train_embeddings, args.save_path, split="train")
+        save_to_chromadb(test_embeddings, args.save_path, split="test")
 
 
 if __name__ == '__main__':
