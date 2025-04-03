@@ -40,7 +40,8 @@ def extract_embeddings(audio_files, device, pretraindir):  # Исправлен�
 def assign_labels(embeddings):
     folder_to_label = {
         "cooker": "повар",
-        "programmer": "программист"
+        "programmer": "программист",
+        "doctor": "доктор"
     }
     
     for emb in embeddings:
