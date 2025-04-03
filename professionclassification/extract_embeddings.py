@@ -97,7 +97,7 @@ def main():
      # 1. Разделяем данные на train и test (если их нет в разных папках)
      all_audio_files = train_audio_files + test_audio_files
      np.random.shuffle(all_audio_files)
-     train_size = int(0.8 * len(all_audio_files))  # Например, 80% для обучения
+     train_size = int(0.4 * len(all_audio_files)) 
      train_files = all_audio_files[:train_size]
      test_files = all_audio_files[train_size:]
 
