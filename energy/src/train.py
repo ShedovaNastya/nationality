@@ -41,7 +41,7 @@ class PhonemeDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, row_label=False):
         row = self.data.iloc[idx]
         phoneme = row['phoneme']
         id = row['id'].__str__()
@@ -49,6 +49,13 @@ class PhonemeDataset(Dataset):
         item = self.data_dict[id]
         embeddings = item["embeddings"]
         energy = item["energy"]
+
+        if row_label:
+            return {
+                "labels": phoneme,
+                "speech_embeddings": torch.tensor(embeddings, dtype=torch.float32),
+                "energy": torch.tensor(energy, dtype=torch.float32),
+            }
 
         return {
             "labels": torch.tensor(self.phoneme_dict[phoneme], dtype=torch.long),
