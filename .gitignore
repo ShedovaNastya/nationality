@@ -173,8 +173,10 @@ cython_debug/
 #dataset
 /dataset
 /myenv
-chroma_db.zip
-dataset.zip
-/chroma_db
 
-/voxblink2_samresnet34
+#chroma_db
+VolumeLevel/chroma_db.rar
+VolumeLevel/chroma_db
+
+#model
+VolumeLevel/train_model/full_model.pth
