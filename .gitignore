@@ -182,9 +182,3 @@ energy/src/wandb/
 /dataset/
 /pretrain_dir/
 /results/
-
-dataset/
-dataset_split/
-embeddings/
-model_weights/
-

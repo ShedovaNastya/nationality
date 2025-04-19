@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 import pickle
 import chromadb
-from LengthOfEachPhoneme.train import Speech2TextModel, SpeechDataset
+from LengthOfEachPhoneme.phoneme_classification.train import Speech2TextModel, SpeechDataset
 from transformers import T5Tokenizer
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
 from sklearn.manifold import TSNE
