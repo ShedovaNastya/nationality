@@ -170,6 +170,17 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+#dataset
+/dataset
+/myenv
+
+#chroma_db
+VolumeLevel/chroma_db.rar
+VolumeLevel/chroma_db
+
+#model
+VolumeLevel/train_model/full_model.pth
+
 
 
 energy/data/test-clean/
@@ -182,3 +193,4 @@ energy/src/wandb/
 /dataset/
 /pretrain_dir/
 /results/
+
