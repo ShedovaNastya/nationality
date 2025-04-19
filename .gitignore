@@ -165,61 +165,20 @@ cython_debug/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+.idea/
 
 # PyPI configuration file
 .pypirc
+
+
+
+energy/data/test-clean/
+energy/data/test-clean-alignments/
+energy/data/*.csv
+energy/models/voxblink2_samresnet34/
+energy/src/speech2text_en_model/
+energy/src/wandb/
+
 /dataset/
 /pretrain_dir/
 /results/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-.venv/
-venv/
-ENV/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Project specific
-cca_similarity/result/
-embeddings/
-length_of_each_phoneme_en_model/
-visualization_results/
-voxblink2_samresnet34/
-wandb/
-check_dataset.py
