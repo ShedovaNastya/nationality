@@ -8,8 +8,10 @@ class BaseDataset(Dataset, abc.ABC):
         self.labels = None
 
     def __getitem__(self, idx):
-        assert self.audio_data is not None, "audio_data is not initialized"
-        assert self.labels is not None, "labels is not initialized"
+        if self.audio_data is None:
+            raise NotImplementedError("self.audio_data is not initialized")
+        if self.labels is None:
+            raise NotImplementedError("self.labels is not initialized")
         return self.audio_data[idx], self.labels[idx]
 
     def __len__(self):
