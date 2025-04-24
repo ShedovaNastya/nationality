@@ -104,7 +104,7 @@ class WordOrderCls(nn.Module):
 def get_audio_paths_and_labels(metadata_path):
     df = pd.read_csv(metadata_path)
     audio_paths = df.iloc[:, 0].tolist()
-    labels = df.iloc[:, 2].tolist()  # 0/1 labels for correct/incorrect order
+    labels = df.iloc[:, 2].tolist()  
     return audio_paths, labels
 
 
