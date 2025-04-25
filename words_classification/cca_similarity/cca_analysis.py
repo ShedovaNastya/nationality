@@ -142,11 +142,14 @@ def visualize_cca_score(cca_coefs, save_path):
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-    plt.figure(figsize=(8, 4))
-    for label, coef in cca_coefs.items():
-        plt.plot(range(1, len(coef) + 1), coef, label=label)
+    all_coefs = np.array(list(cca_coefs.values()))
+    
+    averaged_coefs = np.mean(all_coefs, axis=0)
 
-    plt.title("Visualization of CCA Similarity")
+    plt.figure(figsize=(8, 4))
+    plt.plot(range(1, len(averaged_coefs) + 1), averaged_coefs, label='Average CCA', color='blue')
+
+    plt.title("Visualization of Averaged CCA Similarity")
     plt.xlabel("Layer number")
     plt.ylabel("CCA similarity")
     plt.legend()
