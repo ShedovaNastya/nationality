@@ -1,0 +1,447 @@
+first relu
+accuracy: 0.875
+f1_score: 0.8717948717948718
+layer1 relu 1
+accuracy: 0.85
+f1_score: 0.8235294117647058
+layer1 SimAM 1
+accuracy: 0.75
+f1_score: 0.6666666666666666
+layer1 relu 2
+accuracy: 0.85
+f1_score: 0.8235294117647058
+layer1 relu 3
+accuracy: 0.85
+f1_score: 0.8235294117647058
+layer1 SimAM 2
+accuracy: 0.725
+f1_score: 0.6206896551724138
+layer1 relu 4
+accuracy: 0.625
+f1_score: 0.34782608695652173
+layer1 relu 5
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer1 SimAM 3
+accuracy: 0.825
+f1_score: 0.8205128205128205
+layer1 relu 6
+accuracy: 0.825
+f1_score: 0.7878787878787878
+layer1 relu 7
+accuracy: 0.8
+f1_score: 0.75
+layer1 SimAM 4
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer1 relu 8
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer1 relu 9
+accuracy: 0.85
+f1_score: 0.8333333333333334
+layer1 SimAM 5
+accuracy: 0.7
+f1_score: 0.7272727272727273
+layer1 relu 10
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer1 relu 11
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer1 SimAM 6
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer1 relu 12
+accuracy: 0.6
+f1_score: 0.2
+layer2 relu 1
+accuracy: 0.875
+f1_score: 0.8717948717948718
+layer2 SimAM 1
+accuracy: 0.8
+f1_score: 0.8095238095238095
+layer2 relu 2
+accuracy: 0.725
+f1_score: 0.6206896551724138
+layer2 relu 3
+accuracy: 0.825
+f1_score: 0.8
+layer2 SimAM 2
+accuracy: 0.675
+f1_score: 0.723404255319149
+layer2 relu 4
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer2 relu 5
+accuracy: 0.825
+f1_score: 0.8
+layer2 SimAM 3
+accuracy: 0.425
+f1_score: 0.5964912280701754
+layer2 relu 6
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer2 relu 7
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer2 SimAM 4
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer2 relu 8
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer2 relu 9
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer2 SimAM 5
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer2 relu 10
+accuracy: 0.6
+f1_score: 0.2
+layer2 relu 11
+accuracy: 0.8
+f1_score: 0.8095238095238095
+layer2 SimAM 6
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer2 relu 12
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer2 relu 13
+accuracy: 0.75
+f1_score: 0.6875
+layer2 SimAM 7
+accuracy: 0.6
+f1_score: 0.2
+layer2 relu 14
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer2 relu 15
+accuracy: 0.825
+f1_score: 0.8205128205128205
+layer2 SimAM 8
+accuracy: 0.825
+f1_score: 0.8
+layer2 relu 16
+accuracy: 0.8
+f1_score: 0.7777777777777778
+layer2 relu 17
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer2 SimAM 9
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer2 relu 18
+accuracy: 0.825
+f1_score: 0.8
+layer2 relu 19
+accuracy: 0.775
+f1_score: 0.7428571428571429
+layer2 SimAM 10
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer2 relu 20
+accuracy: 0.675
+f1_score: 0.48
+layer2 relu 21
+accuracy: 0.7
+f1_score: 0.6
+layer2 SimAM 11
+accuracy: 0.825
+f1_score: 0.8292682926829268
+layer2 relu 22
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer2 relu 23
+accuracy: 0.85
+f1_score: 0.85
+layer2 SimAM 12
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer2 relu 24
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer2 relu 25
+accuracy: 0.85
+f1_score: 0.85
+layer2 SimAM 13
+accuracy: 0.775
+f1_score: 0.7428571428571429
+layer2 relu 26
+accuracy: 0.85
+f1_score: 0.85
+layer2 relu 27
+accuracy: 0.825
+f1_score: 0.8292682926829268
+layer2 SimAM 14
+accuracy: 0.85
+f1_score: 0.85
+layer2 relu 28
+accuracy: 0.775
+f1_score: 0.7906976744186046
+layer2 relu 29
+accuracy: 0.75
+f1_score: 0.6875
+layer2 SimAM 15
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer2 relu 30
+accuracy: 0.825
+f1_score: 0.8292682926829268
+layer2 relu 31
+accuracy: 0.825
+f1_score: 0.8292682926829268
+layer2 SimAM 16
+accuracy: 0.425
+f1_score: 0.5964912280701754
+layer2 relu 32
+accuracy: 0.75
+f1_score: 0.7058823529411765
+layer3 relu 1
+accuracy: 0.85
+f1_score: 0.85
+layer3 SimAM 1
+accuracy: 0.725
+f1_score: 0.7555555555555555
+layer3 relu 2
+accuracy: 0.8
+f1_score: 0.7894736842105263
+layer3 relu 3
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer3 SimAM 2
+accuracy: 0.575
+f1_score: 0.10526315789473684
+layer3 relu 4
+accuracy: 0.75
+f1_score: 0.6875
+layer3 relu 5
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 SimAM 3
+accuracy: 0.825
+f1_score: 0.8108108108108109
+layer3 relu 6
+accuracy: 0.85
+f1_score: 0.8421052631578947
+layer3 relu 7
+accuracy: 0.825
+f1_score: 0.8
+layer3 SimAM 4
+accuracy: 0.8
+f1_score: 0.8
+layer3 relu 8
+accuracy: 0.825
+f1_score: 0.8
+layer3 relu 9
+accuracy: 0.7
+f1_score: 0.6
+layer3 SimAM 5
+accuracy: 0.725
+f1_score: 0.7555555555555555
+layer3 relu 10
+accuracy: 0.625
+f1_score: 0.4
+layer3 relu 11
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 SimAM 6
+accuracy: 0.7
+f1_score: 0.7391304347826086
+layer3 relu 12
+accuracy: 0.775
+f1_score: 0.7804878048780488
+layer3 relu 13
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer3 SimAM 7
+accuracy: 0.8
+f1_score: 0.8
+layer3 relu 14
+accuracy: 0.675
+f1_score: 0.5185185185185185
+layer3 relu 15
+accuracy: 0.75
+f1_score: 0.6875
+layer3 SimAM 8
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer3 relu 16
+accuracy: 0.825
+f1_score: 0.8
+layer3 relu 17
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 SimAM 9
+accuracy: 0.7
+f1_score: 0.6
+layer3 relu 18
+accuracy: 0.6
+f1_score: 0.1111111111111111
+layer3 relu 19
+accuracy: 0.75
+f1_score: 0.6875
+layer3 SimAM 10
+accuracy: 0.675
+f1_score: 0.48
+layer3 relu 20
+accuracy: 0.6
+f1_score: 0.3333333333333333
+layer3 relu 21
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer3 SimAM 11
+accuracy: 0.75
+f1_score: 0.7619047619047619
+layer3 relu 22
+accuracy: 0.725
+f1_score: 0.7441860465116279
+layer3 relu 23
+accuracy: 0.725
+f1_score: 0.6451612903225806
+layer3 SimAM 12
+accuracy: 0.425
+f1_score: 0.5964912280701754
+layer3 relu 24
+accuracy: 0.575
+f1_score: 0.10526315789473684
+layer3 relu 25
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 SimAM 13
+accuracy: 0.575
+f1_score: 0.0
+layer3 relu 26
+accuracy: 0.7
+f1_score: 0.5714285714285714
+layer3 relu 27
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer3 SimAM 14
+accuracy: 0.425
+f1_score: 0.5964912280701754
+layer3 relu 28
+accuracy: 0.75
+f1_score: 0.6875
+layer3 relu 29
+accuracy: 0.725
+f1_score: 0.6206896551724138
+layer3 SimAM 15
+accuracy: 0.65
+f1_score: 0.46153846153846156
+layer3 relu 30
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer3 relu 31
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer3 SimAM 16
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 relu 32
+accuracy: 0.575
+f1_score: 0.0
+layer3 relu 33
+accuracy: 0.875
+f1_score: 0.8648648648648649
+layer3 SimAM 17
+accuracy: 0.6
+f1_score: 0.1111111111111111
+layer3 relu 34
+accuracy: 0.8
+f1_score: 0.7647058823529411
+layer3 relu 35
+accuracy: 0.725
+f1_score: 0.6666666666666666
+layer3 SimAM 18
+accuracy: 0.55
+f1_score: 0.6538461538461539
+layer3 relu 36
+accuracy: 0.775
+f1_score: 0.7804878048780488
+layer3 relu 37
+accuracy: 0.8
+f1_score: 0.7777777777777778
+layer3 SimAM 19
+accuracy: 0.825
+f1_score: 0.8205128205128205
+layer3 relu 38
+accuracy: 0.45
+f1_score: 0.6071428571428571
+layer3 relu 39
+accuracy: 0.8
+f1_score: 0.7777777777777778
+layer3 SimAM 20
+accuracy: 0.625
+f1_score: 0.21052631578947367
+layer3 relu 40
+accuracy: 0.75
+f1_score: 0.7058823529411765
+layer3 relu 41
+accuracy: 0.75
+f1_score: 0.6875
+layer3 SimAM 21
+accuracy: 0.75
+f1_score: 0.7619047619047619
+layer3 relu 42
+accuracy: 0.725
+f1_score: 0.6451612903225806
+layer3 relu 43
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 SimAM 22
+accuracy: 0.725
+f1_score: 0.7555555555555555
+layer3 relu 44
+accuracy: 0.525
+f1_score: 0.6415094339622641
+layer3 relu 45
+accuracy: 0.775
+f1_score: 0.7272727272727273
+layer3 SimAM 23
+accuracy: 0.675
+f1_score: 0.5185185185185185
+layer3 relu 46
+accuracy: 0.425
+f1_score: 0.5964912280701754
+layer3 relu 47
+accuracy: 0.725
+f1_score: 0.6451612903225806
+layer3 SimAM 24
+accuracy: 0.675
+f1_score: 0.48
+layer3 relu 48
+accuracy: 0.65
+f1_score: 0.4166666666666667
+layer4 relu 1
+accuracy: 0.85
+f1_score: 0.8421052631578947
+layer4 SimAM 1
+accuracy: 0.875
+f1_score: 0.8648648648648649
+layer4 relu 2
+accuracy: 0.75
+f1_score: 0.7619047619047619
+layer4 relu 3
+accuracy: 0.8
+f1_score: 0.75
+layer4 SimAM 2
+accuracy: 0.85
+f1_score: 0.8421052631578947
+layer4 relu 4
+accuracy: 0.875
+f1_score: 0.8648648648648649
+layer4 relu 5
+accuracy: 0.85
+f1_score: 0.8333333333333334
+layer4 SimAM 3
+accuracy: 0.775
+f1_score: 0.7096774193548387
+layer4 relu 6
+accuracy: 0.85
+f1_score: 0.8333333333333334
+pooling
+accuracy: 0.575
+f1_score: 0.0
