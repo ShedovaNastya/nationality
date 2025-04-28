@@ -288,6 +288,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
     model = wespeaker.load_model_local(args.pretrain_dir)
     model.set_device(device)
 
@@ -327,7 +328,6 @@ def main():
         torch.save(trained_model.state_dict(),
                    f"{args.models_save_path}/{layer}.pth")
         metrics = evaluate(trained_model, test_loader, device)
-
         metrics_list.append((layer, metrics))
         torch.cuda.empty_cache()
 
