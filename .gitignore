@@ -175,7 +175,7 @@ cython_debug/
 energy/data/test-clean/
 energy/data/test-clean-alignments/
 energy/data/*.csv
-energy/models/voxblink2_samresnet34/
+energy/models/
 energy/src/speech2text_en_model/
 energy/src/wandb/
 
