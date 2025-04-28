@@ -109,8 +109,7 @@ class ProfessionCls(nn.Module):
 def get_audio_path(audio_dir):
 
     audio_dir = Path(audio_dir)
-    audio_files = list(audio_dir.glob('**/*.wav')) 
-    print(f"Найдено {len(audio_files)} файлов в {audio_dir}") 
+    audio_files = list(audio_dir.glob('**/*.wav')) + list(audio_dir.glob('**/*.mp3'))
     return audio_files
 
 
