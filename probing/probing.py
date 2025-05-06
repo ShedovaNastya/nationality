@@ -1,7 +1,8 @@
 import argparse
 from base_dataset import BaseDataset
-import os
 from extract_features import extract_features
+import os
+import shutil
 from pathlib import Path
 import json
 
@@ -24,6 +25,7 @@ class ActivationDataset(BaseDataset):
         self.labels = torch.tensor(labels, dtype=torch.long)
 
     def prepare_data(self, activations):
+        activations = [act.clone() for act in activations]
         max_len = max(act.shape[-1] for act in activations)
 
         for i in range(len(activations)):
@@ -56,50 +58,83 @@ class GetActivations(nn.Module):
     """
 
     def __init__(self, model):
-        super(GetActivations, self).__init__()
+        super().__init__()
         self.model = model
+        self.saved_out = None
 
-    def forward(self, x):
-        out = x.permute(0, 2, 1)
-        activations = []
+    def save_identity(self, file_name):
+        folder = Path("tmp_identity")
+        folder.mkdir(exist_ok=True)
+
+        file_path = folder / file_name
+        torch.save(self.saved_out, file_path)
+
+    def delete_identity(self):
+        if os.path.exists("tmp_identity"):
+            shutil.rmtree("tmp_identity")
+
+    def forward(
+            self, x, target_layer, from_activation=False, identity_file=None
+    ):
+        activations = {}
         model_front = self.model.model.front
-
-        x = out.unsqueeze(dim=1)
-
-        out = model_front.relu(model_front.bn1(model_front.conv1(x)))
-        activations.append({"first relu": out})
+        out = x
+        if not from_activation:
+            out = x.permute(0, 2, 1).unsqueeze(dim=1)
+            out = model_front.relu(model_front.bn1(model_front.conv1(out)))
+            self.saved_out = out.clone()
+            if identity_file:
+                self.save_identity(identity_file)
+            if "first relu" == target_layer:
+                activations["first relu"] = out
+                return activations, out
+        elif from_activation:
+            if identity_file and os.path.exists(
+                "tmp_identity/" + identity_file
+            ):
+                self.saved_out = torch.load(
+                    "tmp_identity/" + identity_file, map_location=x.device)
+            out = x
 
         for name, layer in model_front.named_children():
             c_sim = 0
             c_relu = 0
-            if name in ['layer1', 'layer2', 'layer3', 'layer4']:
-                for sec_name, sec_layer in layer.named_children():
-                    identity = out
 
-                    out = sec_layer.relu(sec_layer.bn1(sec_layer.conv1(out)))
-                    c_relu += 1
-                    activations.append({f"{name} relu {c_relu}": out})
+            for block_idx, block in layer.named_children():
+                identity = self.saved_out
 
-                    out = sec_layer.bn2(sec_layer.conv2(out))
-                    out = sec_layer.SimAM(out)
-                    c_sim += 1
-                    activations.append({f"{name} SimAM {c_sim}": out})
+                c_relu += 1
+                if f"{name} relu {c_relu}" == target_layer:
+                    out = block.relu(block.bn1(block.conv1(out)))
+                    activations[f"{name} relu {c_relu}"] = out
+                    return activations, out
 
-                    if sec_layer.downsample is not None:
-                        identity = sec_layer.downsample(identity)
+                c_sim += 1
+                if f"{name} SimAM {c_sim}" == target_layer:
+                    out = block.bn2(block.conv2(out))
+                    out = block.SimAM(out)
+                    activations[f"{name} SimAM {c_sim}"] = out
+                    return activations, out
 
+                c_relu += 1
+                if f"{name} relu {c_relu}" == target_layer:
+                    if block.downsample is not None:
+                        identity = block.downsample(identity)
                     out += identity
-                    out = sec_layer.relu(out)
-                    c_relu += 1
-                    activations.append({f"{name} relu {c_relu}": out})
+                    out = block.relu(out)
+                    self.saved_out = out.clone()
+                    if identity_file:
+                        self.save_identity(identity_file)
+                    activations[f"{name} relu {c_relu}"] = out
+                    return activations, out
 
-        out = self.model.model.pooling(out)
-        activations.append({"pooling": out})
+        if "pooling" == target_layer:
+            out = self.model.model.pooling(out)
+            activations["pooling"] = out
+            return activations, out
 
         if self.model.model.drop:
             out = self.model.model.drop(out)
-
-        out = self.model.model.bottleneck(out)
 
         return activations, out
 
@@ -118,6 +153,31 @@ class GenderCls(nn.Module):
         return self.act(self.fc(x))
 
 
+def get_layers(model):
+    """
+    Returns SimAM ResNet's layers
+    """
+    layers = []
+
+    model_front = model.model.front
+    layers.append("first relu")
+
+    for name, layer in model_front.named_children():
+        c_relu = 0
+        c_sim = 0
+        if name in ['layer1', 'layer2', 'layer3', 'layer4']:
+            for sec_name, sec_layer in layer.named_children():
+                c_relu += 1
+                layers.append(f"{name} relu {c_relu}")
+                c_sim += 1
+                layers.append(f"{name} SimAM {c_sim}")
+                c_relu += 1
+                layers.append(f"{name} relu {c_relu}")
+    layers.append("pooling")
+
+    return layers
+
+
 def get_audio_path(audio_dir):
     """
     Recursively finds all audio files in the specified directory.
@@ -128,24 +188,7 @@ def get_audio_path(audio_dir):
     return audio_files
 
 
-def get_activations(model, audio_path, device):
-    """
-    Gets model activations.
-    """
-    feats = extract_features(audio_path)
-    feats = feats.to(device)
-
-    with torch.no_grad():
-        activations, _ = model(feats)
-
-    acts = {
-        'file_path': audio_path,
-        'act': activations
-    }
-    return acts
-
-
-def get_activations_for_layer(model, audio_files, device, layer_name):
+def get_activations(model, audio_files, device, chunk_num, layer):
     """
     Gets model activations for a specified layer.
     """
@@ -155,21 +198,21 @@ def get_activations_for_layer(model, audio_files, device, layer_name):
 
     activations = []
     with torch.no_grad():
-        for audio_path in tqdm(
-            audio_files,
-            desc=f"Extracting {layer_name} activations"
-        ):
+        for i, audio_path in enumerate(tqdm(
+            audio_files, desc="Extracting activations"
+        )):
             feats = extract_features(audio_path).to(device)
-            acts, _ = model(feats)
-
-            activation = next((d[layer_name]
-                              for d in acts if layer_name in d), None)
-            if activation is not None:
-                activations.append(activation.cpu())
+            acts, _ = model(
+                feats, layer,
+                identity_file=f"identity_{chunk_num}_{i}.pt")
+            activations.append(acts[layer].cpu())
     return activations, labels
 
 
 def resume_test_layer(metrics_path):
+    """
+    Defines last test layer
+    """
     if not Path(metrics_path).exists():
         return None
     with open(metrics_path, "r") as f:
@@ -178,6 +221,25 @@ def resume_test_layer(metrics_path):
         if ':' not in line:
             return line
     return None
+
+
+def save_tmp(data, file_name):
+    """
+    Saves temp activations
+    """
+    folder = Path("tmp")
+    folder.mkdir(exist_ok=True)
+
+    file_path = folder / file_name
+    torch.save(data, file_path)
+
+
+def delete_tmp():
+    """
+    Deletes temp activations
+    """
+    if os.path.exists("tmp"):
+        shutil.rmtree("tmp")
 
 
 def train_model(
@@ -222,6 +284,9 @@ def evaluate(layer, y_pred, y_true):
 
 
 def read_metrics(file_path):
+    """
+    Reads test metrics from .txt file
+    """
     metrics_list = []
     current_layer = None
     current_metrics = {}
@@ -253,6 +318,9 @@ def read_metrics(file_path):
 
 
 def plot_metrics(metrics_list, save_path):
+    """
+    Saves metrics visualization in .png file
+    """
     layers = [m[0] for m in metrics_list]
     accuracies = [m[1]["accuracy"] for m in metrics_list]
     f1_scores = [m[1]["f1_score"] for m in metrics_list]
@@ -304,12 +372,6 @@ def main():
         help="Path to wespeaker model pretrain_dir."
     )
     parser.add_argument(
-        "--start_layer",
-        type=str,
-        default=None,
-        help="The name of the layer from which to start training."
-    )
-    parser.add_argument(
         "--train_dir",
         type=str,
         default="./train_audio",
@@ -358,22 +420,12 @@ def main():
     train_files = get_audio_path(args.train_dir)
     test_files = get_audio_path(args.test_dir)
 
-    acts = get_activations(acts_model, train_files[0], device)
-    layers = [list(item.keys())[0] for item in acts['act']]
-
     resume_file = "last_layer.json"
     resume_test_file = args.text_save_path
 
-    acts = get_activations(acts_model, train_files[0], device)
-    layers = [list(item.keys())[0] for item in acts['act']]
+    layers = get_layers(model)
 
-    if args.start_layer is not None and Path(resume_file).exists():
-        raise ValueError(
-            "You can't define start_layer and resume layer at the same time")
-
-    if args.start_layer is not None:
-        resume_layer = args.start_layer
-    elif Path(resume_file).exists():
+    if Path(resume_file).exists():
         with open(resume_file, "r") as f:
             resume_layer = json.load(f).get("last_layer")
     else:
@@ -398,41 +450,58 @@ def main():
             train_files, args.chunk_size)
 
         for layer in layers:
-            model = None
+            print(f"Processing layer: {layer}")
+            probing_model = None
             for i, (_, chunk_idx) in enumerate(
                 skf.split(file_paths, file_labels)
             ):
                 chunk = file_paths[chunk_idx]
+                if not os.path.exists(f"tmp/tmp_acts_{i}.pt"):
+                    train_acts, train_labels = get_activations(
+                        acts_model, chunk, device, i, layer)
+                    train_dataset = ActivationDataset(train_acts, train_labels)
+                    train_loader = DataLoader(
+                        train_dataset, batch_size=32, shuffle=True)
+                else:
+                    train_acts = []
+                    acts_list = torch.load(f"tmp/tmp_acts_{i}.pt")
+                    train_labels = torch.load(f"tmp/tmp_labels_{i}.pt")
+                    for num, act in enumerate(acts_list):
+                        with torch.no_grad():
+                            act = act.to(device)
+                            acts, _ = acts_model(
+                                act, layer, True,
+                                identity_file=f"identity_{i}_{num}.pt")
+                            train_acts.append(acts[layer])
+                    train_dataset = ActivationDataset(train_acts, train_labels)
+                    train_loader = DataLoader(
+                        train_dataset, batch_size=32, shuffle=True)
 
-                train_acts, train_labels = get_activations_for_layer(
-                    acts_model, chunk, device, layer)
-
-                train_dataset = ActivationDataset(train_acts, train_labels)
-                train_loader = DataLoader(
-                    train_dataset, batch_size=32, shuffle=True)
-
-                if model is None:
-                    model = train_model(
+                if probing_model is None:
+                    probing_model = train_model(
                         train_loader,
                         input_dim=train_dataset.audio_data.shape[-1],
                         device=device
                     )
                 else:
-                    model = train_model(
+                    probing_model = train_model(
                         train_loader,
                         input_dim=train_dataset.audio_data.shape[-1],
                         device=device,
-                        existing_model=model
+                        existing_model=probing_model
                     )
+                save_tmp(train_acts, f"tmp_acts_{i}.pt")
+                save_tmp(train_labels, f"tmp_labels_{i}.pt")
 
-                del train_acts, train_labels, train_dataset, train_loader
-                torch.cuda.empty_cache()
-
-            torch.save(model.state_dict(), f"./models/{layer}.pth")
+            torch.save(probing_model.state_dict(), f"./models/{layer}.pth")
             with open(resume_file, "w") as f:
                 json.dump({"last_layer": layer}, f)
 
-    layers = [list(item.keys())[0] for item in acts['act']]
+    acts_model.delete_identity()
+    delete_tmp()
+
+    print("Testing")
+    layers = get_layers(model)
     resume_test = resume_test_layer(resume_test_file)
     if resume_test is not None:
         if resume_test == layers[-1]:
@@ -449,46 +518,66 @@ def main():
             raise ValueError(f"Resume test layer {resume_test} not found.")
 
     skf, file_paths, file_labels = prepare_chunks(test_files, args.chunk_size)
-    metrics_list = []
 
     for layer in layers:
+        print(f"Processing layer: {layer}")
         all_preds = []
         all_labels = []
 
         for i, (_, chunk_idx) in enumerate(skf.split(file_paths, file_labels)):
             chunk = file_paths[chunk_idx]
-            test_acts, test_labels = get_activations_for_layer(
-                acts_model, chunk, device, layer)
-            dataset = ActivationDataset(test_acts, test_labels)
-            loader = DataLoader(dataset, batch_size=32, shuffle=False)
+            if not os.path.exists(f"tmp/tmp_acts_{i}.pt"):
+                test_acts, test_labels = get_activations(
+                    acts_model, chunk, device, i, layer)
+                dataset = ActivationDataset(test_acts, test_labels)
+                loader = DataLoader(dataset, batch_size=32, shuffle=False)
+            else:
+                test_acts = []
+                acts_list = torch.load(f"tmp/tmp_acts_{i}.pt")
+                test_labels = torch.load(f"tmp/tmp_labels_{i}.pt")
+                for num, act in enumerate(acts_list):
+                    with torch.no_grad():
+                        act = act.to(device)
+                        acts, _ = acts_model(
+                            act, layer, True,
+                            identity_file=f"identity_{i}_{num}.pt"
+                        )
+                        test_acts.append(acts[layer])
 
-            model = GenderCls(dataset.audio_data.shape[-1]).to(device)
-            model.load_state_dict(torch.load(
+                dataset = ActivationDataset(test_acts, test_labels)
+                loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+            save_tmp(test_acts, f"tmp_acts_{i}.pt")
+            save_tmp(test_labels, f"tmp_labels_{i}.pt")
+            probing_model = GenderCls(dataset.audio_data.shape[-1]).to(device)
+            probing_model.load_state_dict(torch.load(
                 f"./models/{layer}.pth", weights_only=True))
-            model.eval()
+            probing_model.eval()
 
             y_pred_chunk, y_true_chunk = [], []
             with torch.no_grad():
                 for X_batch, y_batch in loader:
                     X_batch = X_batch.to(device)
-                    outputs = model(X_batch).cpu()
+                    outputs = probing_model(X_batch).cpu()
                     y_pred_chunk.extend(outputs.numpy())
                     y_true_chunk.extend(y_batch.numpy())
 
             all_preds.extend(y_pred_chunk)
             all_labels.extend(y_true_chunk)
 
-            del test_acts, test_labels, dataset, loader, model
+            del test_acts, test_labels, dataset, loader, probing_model
             torch.cuda.empty_cache()
 
         y_pred = np.array(all_preds)
         y_true = np.array(all_labels)
         metrics = evaluate(layer, y_pred, y_true)
 
-        metrics_list.append(metrics)
+        save_metrics([metrics], args.text_save_path)
 
-    save_metrics(metrics_list, args.text_save_path)
-    plot_metrics(metrics_list, args.visual_save_path)
+    acts_model.delete_identity()
+    delete_tmp()
+
+    plot_metrics(read_metrics(args.text_save_path), args.visual_save_path)
 
 
 if __name__ == '__main__':
