@@ -4,7 +4,7 @@
 source .venv/bin/activate
 
 # Путь к модели SimAMResNet34 vb
-MODEL_PATH="voxblink2_samresnet34"
+MODEL_PATH="voxblink2_samresnet100_ft"
 
 # Путь к датасету с фонемами
 DATASET_PATH="dataset/phoneme_dataset.pkl"
@@ -19,7 +19,7 @@ MAX_SAMPLES=200
 echo "Running CCA analysis for phoneme duration..."
 
 # Запуск анализа CCA для длительности фонем
-python -m cca_similarity.phoneme_duration_analysis \
+python LengthOfEachPhoneme/cca/phoneme_duration_analysis.py \
     --pretrain_dir ${MODEL_PATH} \
     --dataset_path ${DATASET_PATH} \
     --max_samples ${MAX_SAMPLES} \

@@ -1,9 +1,14 @@
 import argparse
 import os
-from cca_similarity.extract_features import extract_features
-from cca_similarity.cca_score import CCA
-from collections import defaultdict
+import sys
 from pathlib import Path
+
+# Добавляем корневой каталог проекта в путь поиска модулей
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from cca_similarity.extract_features import extract_features
+from cca_score import CCA
+from collections import defaultdict
 
 import numpy as np
 import matplotlib.pyplot as plt

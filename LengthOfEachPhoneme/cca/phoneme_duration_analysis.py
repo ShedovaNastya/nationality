@@ -9,8 +9,8 @@ import torch
 from tqdm import tqdm
 import wespeaker
 
-from cca_similarity.cca_analysis import GetActivations, get_activations
-from cca_similarity.cca_score import CCA
+from cca_analysis import GetActivations, get_activations
+from cca_score import CCA
 
 
 def load_phoneme_dataset(dataset_path):

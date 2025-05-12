@@ -1,0 +1,307 @@
+CCA Similarity: Model Activations vs Phoneme Duration
+============================================================
+
+Duration: short
+----------------------------------------
+first relu: 0.000474
+layer1 relu: 0.000648
+SimAM: 0.000452
+layer1 relu: 0.000452
+layer1 relu: 0.000589
+SimAM: 0.000376
+layer1 relu: 0.000376
+layer1 relu: 0.000540
+SimAM: 0.000446
+layer1 relu: 0.000446
+layer1 relu: 0.000589
+SimAM: 0.000432
+layer1 relu: 0.000432
+layer1 relu: 0.000524
+SimAM: 0.000462
+layer1 relu: 0.000462
+layer1 relu: 0.000536
+SimAM: 0.000328
+layer1 relu: 0.000328
+layer2 relu: 0.000768
+SimAM: 0.000396
+layer2 relu: 0.000396
+layer2 relu: 0.000564
+SimAM: 0.000394
+layer2 relu: 0.000394
+layer2 relu: 0.000591
+SimAM: 0.000388
+layer2 relu: 0.000388
+layer2 relu: 0.000556
+SimAM: 0.000469
+layer2 relu: 0.000469
+layer2 relu: 0.000647
+SimAM: 0.000507
+layer2 relu: 0.000507
+layer2 relu: 0.000546
+SimAM: 0.000543
+layer2 relu: 0.000543
+layer2 relu: 0.000680
+SimAM: 0.000453
+layer2 relu: 0.000453
+layer2 relu: 0.000659
+SimAM: 0.000509
+layer2 relu: 0.000509
+layer2 relu: 0.000718
+SimAM: 0.000436
+layer2 relu: 0.000436
+layer2 relu: 0.000611
+SimAM: 0.000462
+layer2 relu: 0.000462
+layer2 relu: 0.000630
+SimAM: 0.000530
+layer2 relu: 0.000530
+layer2 relu: 0.000698
+SimAM: 0.000522
+layer2 relu: 0.000522
+layer2 relu: 0.000969
+SimAM: 0.000603
+layer2 relu: 0.000603
+layer2 relu: 0.000848
+SimAM: 0.000613
+layer2 relu: 0.000613
+layer2 relu: 0.000930
+SimAM: 0.000738
+layer2 relu: 0.000738
+layer2 relu: 0.001139
+SimAM: 0.000652
+layer2 relu: 0.000652
+layer3 relu: 0.002006
+SimAM: 0.000880
+layer3 relu: 0.000880
+layer3 relu: 0.001227
+SimAM: 0.000997
+layer3 relu: 0.000997
+layer3 relu: 0.001113
+SimAM: 0.001001
+layer3 relu: 0.001001
+layer3 relu: 0.001120
+SimAM: 0.001019
+layer3 relu: 0.001019
+layer3 relu: 0.001057
+SimAM: 0.001072
+layer3 relu: 0.001072
+layer3 relu: 0.001146
+SimAM: 0.001094
+layer3 relu: 0.001094
+layer3 relu: 0.001308
+SimAM: 0.001006
+layer3 relu: 0.001006
+layer3 relu: 0.001274
+SimAM: 0.000918
+layer3 relu: 0.000918
+layer3 relu: 0.000963
+SimAM: 0.000934
+layer3 relu: 0.000934
+layer3 relu: 0.000954
+SimAM: 0.000963
+layer3 relu: 0.000963
+layer3 relu: 0.000732
+SimAM: 0.000878
+layer3 relu: 0.000878
+layer3 relu: 0.000815
+SimAM: 0.000886
+layer3 relu: 0.000886
+layer3 relu: 0.000702
+SimAM: 0.000813
+layer3 relu: 0.000813
+layer3 relu: 0.000714
+SimAM: 0.000984
+layer3 relu: 0.000984
+layer3 relu: 0.000771
+SimAM: 0.001032
+layer3 relu: 0.001032
+layer3 relu: 0.001060
+SimAM: 0.001121
+layer3 relu: 0.001121
+layer3 relu: 0.001057
+SimAM: 0.001127
+layer3 relu: 0.001127
+layer3 relu: 0.000905
+SimAM: 0.001209
+layer3 relu: 0.001209
+layer3 relu: 0.001168
+SimAM: 0.001307
+layer3 relu: 0.001307
+layer3 relu: 0.001283
+SimAM: 0.001379
+layer3 relu: 0.001379
+layer3 relu: 0.001396
+SimAM: 0.001434
+layer3 relu: 0.001434
+layer3 relu: 0.001424
+SimAM: 0.001458
+layer3 relu: 0.001458
+layer3 relu: 0.001278
+SimAM: 0.001418
+layer3 relu: 0.001418
+layer3 relu: 0.001658
+SimAM: 0.001262
+layer3 relu: 0.001262
+layer4 relu: 0.003340
+SimAM: 0.002379
+layer4 relu: 0.002379
+layer4 relu: 0.002552
+SimAM: 0.001657
+layer4 relu: 0.001657
+layer4 relu: 0.002587
+SimAM: 0.001227
+layer4 relu: 0.001227
+pooling: 0.004296
+
+Duration: medium
+----------------------------------------
+first relu: 0.000158
+layer1 relu: 0.000382
+SimAM: 0.000294
+layer1 relu: 0.000294
+layer1 relu: 0.000867
+SimAM: 0.000313
+layer1 relu: 0.000313
+layer1 relu: 0.000763
+SimAM: 0.000333
+layer1 relu: 0.000333
+layer1 relu: 0.000383
+SimAM: 0.000216
+layer1 relu: 0.000216
+layer1 relu: 0.000169
+SimAM: 0.000169
+layer1 relu: 0.000169
+layer1 relu: 0.000581
+SimAM: 0.000189
+layer1 relu: 0.000189
+layer2 relu: 0.000087
+SimAM: 0.000387
+layer2 relu: 0.000387
+layer2 relu: 0.000371
+SimAM: 0.000336
+layer2 relu: 0.000336
+layer2 relu: 0.000600
+SimAM: 0.000297
+layer2 relu: 0.000297
+layer2 relu: 0.000536
+SimAM: 0.000333
+layer2 relu: 0.000333
+layer2 relu: 0.000286
+SimAM: 0.000275
+layer2 relu: 0.000275
+layer2 relu: 0.000483
+SimAM: 0.000299
+layer2 relu: 0.000299
+layer2 relu: 0.000512
+SimAM: 0.000567
+layer2 relu: 0.000567
+layer2 relu: 0.000286
+SimAM: 0.000546
+layer2 relu: 0.000546
+layer2 relu: 0.000896
+SimAM: 0.000346
+layer2 relu: 0.000346
+layer2 relu: 0.000568
+SimAM: 0.000219
+layer2 relu: 0.000219
+layer2 relu: 0.000171
+SimAM: 0.000363
+layer2 relu: 0.000363
+layer2 relu: 0.001148
+SimAM: 0.000248
+layer2 relu: 0.000248
+layer2 relu: 0.000620
+SimAM: 0.000576
+layer2 relu: 0.000576
+layer2 relu: 0.000175
+SimAM: 0.000394
+layer2 relu: 0.000394
+layer2 relu: 0.000249
+SimAM: 0.000512
+layer2 relu: 0.000512
+layer2 relu: 0.000523
+SimAM: 0.000497
+layer2 relu: 0.000497
+layer3 relu: 0.001266
+SimAM: 0.000404
+layer3 relu: 0.000404
+layer3 relu: 0.000385
+SimAM: 0.000532
+layer3 relu: 0.000532
+layer3 relu: 0.000504
+SimAM: 0.000190
+layer3 relu: 0.000190
+layer3 relu: 0.000214
+SimAM: 0.000264
+layer3 relu: 0.000264
+layer3 relu: 0.000303
+SimAM: 0.000289
+layer3 relu: 0.000289
+layer3 relu: 0.000705
+SimAM: 0.000432
+layer3 relu: 0.000432
+layer3 relu: 0.000455
+SimAM: 0.000435
+layer3 relu: 0.000435
+layer3 relu: 0.000424
+SimAM: 0.000347
+layer3 relu: 0.000347
+layer3 relu: 0.000390
+SimAM: 0.000541
+layer3 relu: 0.000541
+layer3 relu: 0.000569
+SimAM: 0.000690
+layer3 relu: 0.000690
+layer3 relu: 0.000693
+SimAM: 0.000655
+layer3 relu: 0.000655
+layer3 relu: 0.000715
+SimAM: 0.000747
+layer3 relu: 0.000747
+layer3 relu: 0.000335
+SimAM: 0.000479
+layer3 relu: 0.000479
+layer3 relu: 0.000295
+SimAM: 0.000729
+layer3 relu: 0.000729
+layer3 relu: 0.000845
+SimAM: 0.000709
+layer3 relu: 0.000709
+layer3 relu: 0.000387
+SimAM: 0.000563
+layer3 relu: 0.000563
+layer3 relu: 0.000538
+SimAM: 0.000306
+layer3 relu: 0.000306
+layer3 relu: 0.000959
+SimAM: 0.000459
+layer3 relu: 0.000459
+layer3 relu: 0.000546
+SimAM: 0.000479
+layer3 relu: 0.000479
+layer3 relu: 0.001649
+SimAM: 0.000525
+layer3 relu: 0.000525
+layer3 relu: 0.000877
+SimAM: 0.000335
+layer3 relu: 0.000335
+layer3 relu: 0.001255
+SimAM: 0.000348
+layer3 relu: 0.000348
+layer3 relu: 0.000323
+SimAM: 0.000471
+layer3 relu: 0.000471
+layer3 relu: 0.001118
+SimAM: 0.000397
+layer3 relu: 0.000397
+layer4 relu: 0.001580
+SimAM: 0.000354
+layer4 relu: 0.000354
+layer4 relu: 0.001310
+SimAM: 0.000983
+layer4 relu: 0.000983
+layer4 relu: 0.000171
+SimAM: 0.000846
+layer4 relu: 0.000846
+pooling: 0.014250
+
